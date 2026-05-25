@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────
+   THEME TOKENS
+   - All UI colours are driven from CSS variables here, so
+     toggling the `dark` class on <html> switches them in one
+     place. Hardcoded slate-* utility classes still work and are
+     readable in both modes because tokens stay within the same
+     family.
+   ───────────────────────────────────────────────────────────── */
+@layer base {
+    :root {
+        --bg-page:        248 250 252;   /* slate-50  */
+        --bg-surface:     241 245 249;   /* slate-100 — page bg, gives cards contrast */
+        --bg-card:        255 255 255;   /* white     */
+        --bg-elevated:    248 250 252;   /* slate-50  */
+        --border-subtle:  226 232 240;   /* slate-200 */
+        --border-strong:  203 213 225;   /* slate-300 */
+        --text-primary:   15 23 42;      /* slate-900 */
+        --text-muted:     100 116 139;   /* slate-500 */
+        --accent:         220 38 38;     /* red-600   */
+        --shadow-card:    0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+
+        --color-accent:   theme('colors.red.600');
+    }
+
+    .dark {
+        --bg-page:        2 6 23;        /* slate-950 */
+        --bg-surface:     2 6 23;
+        --bg-card:        15 23 42;      /* slate-900 */
+        --bg-elevated:    30 41 59;      /* slate-800 */
+        --border-subtle:  30 41 59;      /* slate-800 */
+        --border-strong:  51 65 85;      /* slate-700 */
+        --text-primary:   248 250 252;
+        --text-muted:     148 163 184;
+        --accent:         239 68 68;     /* red-500   */
+        --shadow-card:    none;
+
+        --color-accent:   theme('colors.red.500');
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   FLUX CARD overrides
+   - In light mode Flux cards (bg-white + border-zinc-200) blend
+     into a white-ish page. Bump the border + add a soft shadow
+     so cards actually look like cards.
+   ───────────────────────────────────────────────────────────── */
+@layer components {
+    [data-flux-card] {
+        border-color: rgb(var(--border-subtle)) !important;
+        box-shadow: var(--shadow-card);
+    }
+
+    /* Make inputs/selects readable in light mode (Flux defaults
+       to bg-white + border-zinc-200 which can disappear) */
+    [data-flux-control] {
+        border-color: rgb(var(--border-subtle));
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Smooth theme transition (skip media so images don't fade)
+   ───────────────────────────────────────────────────────────── */
+@layer base {
+    *,
+    *::before,
+    *::after {
+        transition-property: background-color, border-color, color, fill, stroke;
+        transition-duration: 150ms;
+        transition-timing-function: ease;
+    }
+    img, video, svg { transition: none; }
+}
