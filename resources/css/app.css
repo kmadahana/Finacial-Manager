@@ -44,20 +44,83 @@
 
 /* ─────────────────────────────────────────────────────────────
    FLUX CARD overrides
-   - In light mode Flux cards (bg-white + border-zinc-200) blend
-     into a white-ish page. Bump the border + add a soft shadow
-     so cards actually look like cards.
    ───────────────────────────────────────────────────────────── */
 @layer components {
     [data-flux-card] {
         border-color: rgb(var(--border-subtle)) !important;
         box-shadow: var(--shadow-card);
+        transition: transform 0.22s cubic-bezier(0.22,1,0.36,1),
+                    box-shadow 0.22s cubic-bezier(0.22,1,0.36,1),
+                    border-color 0.22s ease;
     }
 
-    /* Make inputs/selects readable in light mode (Flux defaults
-       to bg-white + border-zinc-200 which can disappear) */
+    [data-flux-card]:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 32px -4px rgba(0,0,0,0.10),
+                    0 3px 10px -2px rgba(0,0,0,0.06) !important;
+        border-color: rgb(var(--border-strong)) !important;
+    }
+
+    .dark [data-flux-card]:hover {
+        box-shadow: 0 10px 32px -4px rgba(0,0,0,0.40),
+                    0 3px 10px -2px rgba(0,0,0,0.25) !important;
+        border-color: rgb(var(--border-strong)) !important;
+    }
+
+    /* Inputs/selects readable in light mode */
     [data-flux-control] {
         border-color: rgb(var(--border-subtle));
+    }
+
+    /* Flux primary button glow pulse on hover */
+    [data-flux-button][data-variant="primary"]:hover {
+        box-shadow: 0 0 0 3px rgba(var(--accent), 0.18);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PAGE ENTRANCE — authenticated shell
+   ───────────────────────────────────────────────────────────── */
+@layer utilities {
+    @keyframes pageEnter {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .page-enter {
+        animation: pageEnter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    /* Row hover accent — list items inside cards */
+    .row-hover {
+        transition: background-color 0.15s ease, padding-left 0.15s ease;
+        border-left: 2px solid transparent;
+    }
+    .row-hover:hover {
+        padding-left: 0.75rem;
+        border-left-color: rgb(var(--accent));
+        background-color: rgba(var(--accent), 0.04);
+        border-radius: 0.5rem;
+    }
+
+    /* Progress bar entrance */
+    @keyframes barSlide {
+        from { transform: scaleX(0); }
+        to   { transform: scaleX(1); }
+    }
+    .bar-enter {
+        transform-origin: left;
+        animation: barSlide 1s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+    }
+
+    /* Stat card number pop-in */
+    @keyframes numPop {
+        0%   { opacity: 0; transform: translateY(6px) scale(0.9); }
+        70%  { transform: translateY(-1px) scale(1.02); }
+        100% { opacity: 1; transform: none; }
+    }
+    .num-pop {
+        animation: numPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
     }
 }
 

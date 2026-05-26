@@ -16,9 +16,11 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('dashboard', \App\Livewire\Dashboard::class)->name('dashboard');
+    Route::get('income',    \App\Livewire\Income\Index::class)->name('income');
 
-    Route::get('transactions', \App\Livewire\Transactions\Index::class)->name('transactions');
-    Route::get('categories',   \App\Livewire\Categories\Index::class)->name('categories');
+    Route::get('transactions',     \App\Livewire\Transactions\Index::class)->name('transactions');
+    Route::get('transactions/all', \App\Livewire\Transactions\All::class)->name('transactions.all');
+    Route::get('categories',       \App\Livewire\Categories\Index::class)->name('categories');
     Route::get('goals',        \App\Livewire\Goals\Index::class)->name('goals');
     Route::get('reports',      \App\Livewire\Reports\Index::class)->name('reports');
     Route::get('settings',     \App\Livewire\Settings\Index::class)->name('settings');

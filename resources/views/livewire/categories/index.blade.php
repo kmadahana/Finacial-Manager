@@ -114,7 +114,7 @@
             @else
                 <div class="space-y-2">
                     @foreach($incomeCategories as $cat)
-                        <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                        <div class="row-hover flex items-center gap-3 p-3 rounded-xl"
                              wire:key="inc-{{ $cat->id }}">
                             <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                                  style="background:{{ $cat->color }}20">

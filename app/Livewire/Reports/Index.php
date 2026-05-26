@@ -4,6 +4,7 @@ namespace App\Livewire\Reports;
 
 use Livewire\Component;
 use App\Models\Transaction;
+use App\Support\MonthlyFinance;
 use Illuminate\Support\Carbon;
 
 class Index extends Component
@@ -12,54 +13,58 @@ class Index extends Component
 
     public function render()
     {
-        $userId = auth()->id();
-        $now    = now();
+        $user   = auth()->user();
+        $userId = $user->id;
 
-        $months = match ($this->period) {
+        // Everything is measured over PAY CYCLES (not calendar months) and
+        // income includes salary — so Reports matches the Dashboard.
+        [$cy, $cm] = MonthlyFinance::currentPlanningMonth($user);
+
+        $count = match ($this->period) {
             '12m'  => 12,
-            'ytd'  => max(1, $now->month),
+            'ytd'  => max(1, $cm),
             default => 6,
         };
-        $start = $now->copy()->subMonths($months - 1)->startOfMonth();
 
-        // ── Monthly trend (income vs expense) ─────────────────────
-        $rows = Transaction::where('user_id', $userId)
-            ->whereBetween('transaction_date', [$start, $now])
-            ->selectRaw("
-                strftime('%Y-%m', transaction_date) as ym,
-                type,
-                SUM(amount) as total
-            ")
-            ->groupBy('ym', 'type')
-            ->get();
+        // Build the last N pay-cycles, oldest → current planning cycle.
+        // Skip anything before the user registered — no data, no assumed earnings.
+        [$ry, $rm] = MonthlyFinance::registrationMonth($user);
+        $regFirst  = Carbon::create($ry, $rm, 1);
 
-        $monthly = [];
-        for ($i = 0; $i < $months; $i++) {
-            $m  = $start->copy()->addMonths($i);
-            $ym = $m->format('Y-m');
-            $monthly[$ym] = [
-                'label'   => $m->format('M'),
-                'income'  => 0,
-                'expense' => 0,
-            ];
-        }
-        foreach ($rows as $r) {
-            if (isset($monthly[$r->ym])) {
-                $monthly[$r->ym][$r->type] = (float) $r->total;
+        $anchor = Carbon::create($cy, $cm, 1);
+        $cycles = [];
+        for ($i = $count - 1; $i >= 0; $i--) {
+            $c = $anchor->copy()->subMonths($i);
+            if ($c->lt($regFirst)) {
+                continue;
             }
+            $cycles[] = MonthlyFinance::for($user, $c->year, $c->month);
         }
-        $monthly = array_values($monthly);
-        $maxBar  = max(1, collect($monthly)->flatMap(fn($m) => [$m['income'], $m['expense']])->max());
 
-        // ── Category breakdown (this month, expenses) ─────────────
+        // ── Monthly trend (planned income incl. salary vs expense) ──
+        $monthly = array_map(fn (MonthlyFinance $f) => [
+            'label'   => Carbon::create($f->year, $f->month, 1)->format('M'),
+            'income'  => $f->plannedIncome,
+            'expense' => $f->expenses,
+        ], $cycles);
+
+        $maxBar = max(1, collect($monthly)->flatMap(fn ($m) => [$m['income'], $m['expense']])->max());
+
+        $totalIncome  = (float) collect($monthly)->sum('income');
+        $totalExpense = (float) collect($monthly)->sum('expense');
+
+        // Current planning cycle (last in the list)
+        $fin = end($cycles);
+
+        // ── Category breakdown — current cycle window ─────────────
         $catRows = Transaction::where('user_id', $userId)
             ->where('type', 'expense')
-            ->whereYear('transaction_date', $now->year)
-            ->whereMonth('transaction_date', $now->month)
+            ->where('transaction_date', '>=', $fin->windowStart)
+            ->where('transaction_date', '<', $fin->windowEnd)
             ->with('category')
             ->get()
             ->groupBy('category_id')
-            ->map(fn($g) => [
+            ->map(fn ($g) => [
                 'name'  => $g->first()->category?->name  ?? 'Uncategorised',
                 'color' => $g->first()->category?->color ?? '#64748b',
                 'icon'  => $g->first()->category?->icon  ?? 'ti-tag',
@@ -71,29 +76,47 @@ class Index extends Component
 
         $categoryTotal = (float) $catRows->sum('total');
 
-        // ── Totals for the selected period ────────────────────────
-        $totals = Transaction::where('user_id', $userId)
-            ->whereBetween('transaction_date', [$start, $now])
-            ->selectRaw("
-                SUM(CASE WHEN type='income'  THEN amount ELSE 0 END) as income,
-                SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as expense,
-                COUNT(*) as count
-            ")->first();
+        // ── Income allocation pie slices — current cycle ──────────
+        $plannedIncome = $fin->plannedIncome;
+        $pieSlices = [];
+        if ($plannedIncome > 0) {
+            foreach ($catRows as $row) {
+                if ($row['total'] <= 0) continue;
+                $pieSlices[] = [
+                    'name'   => $row['name'],
+                    'color'  => $row['color'],
+                    'amount' => $row['total'],
+                    'pct'    => round(($row['total'] / $plannedIncome) * 100, 1),
+                ];
+            }
+            $savings = max(0.0, $plannedIncome - $categoryTotal);
+            if ($savings > 0) {
+                $pieSlices[] = [
+                    'name'   => 'Savings',
+                    'color'  => '#22c55e',
+                    'amount' => $savings,
+                    'pct'    => round(($savings / $plannedIncome) * 100, 1),
+                ];
+            }
+        }
 
-        $income  = (float) ($totals->income  ?? 0);
-        $expense = (float) ($totals->expense ?? 0);
+        $firstLabel = Carbon::create($cycles[0]->year, $cycles[0]->month, 1)->format('M Y');
+        $cycleLabel = Carbon::create($fin->year, $fin->month, 1)->format('M Y');
 
         return view('livewire.reports.index', [
             'monthly'        => $monthly,
             'maxBar'         => $maxBar,
             'catRows'        => $catRows,
             'categoryTotal'  => $categoryTotal,
-            'totalIncome'    => $income,
-            'totalExpense'   => $expense,
-            'netBalance'     => $income - $expense,
-            'totalCount'     => (int) ($totals->count ?? 0),
-            'periodLabel'    => $start->format('M Y') . ' – ' . $now->format('M Y'),
-            'savingsRate'    => $income > 0 ? round((($income - $expense) / $income) * 100, 1) : 0,
+            'totalIncome'    => $totalIncome,
+            'totalExpense'   => $totalExpense,
+            'netBalance'     => $totalIncome - $totalExpense,
+            'periodLabel'    => $firstLabel . ' – ' . $cycleLabel,
+            'savingsRate'    => $totalIncome > 0 ? round((($totalIncome - $totalExpense) / $totalIncome) * 100, 1) : 0,
+            'pieSlices'      => $pieSlices,
+            'plannedIncome'  => $plannedIncome,
+            'cycleLabel'     => $cycleLabel,
+            'windowLabel'    => $fin->windowLabel(),
         ])->layout('components.layouts.app');
     }
 }

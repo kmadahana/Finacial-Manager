@@ -10,7 +10,7 @@ export default {
         './resources/views/**/*.blade.php',
     ],
 
-    // Classes used inside JS template literals that Tailwind can't scan
+    // Classes used inside JS template literals or custom CSS that Tailwind can't auto-scan
     safelist: [
         'bg-slate-100', 'dark:bg-slate-800',
         'text-slate-900', 'dark:text-white',
@@ -18,6 +18,10 @@ export default {
         'text-slate-700', 'dark:text-slate-300',
         'bg-slate-200', 'dark:bg-slate-700',
         'divide-slate-100', 'dark:divide-slate-800',
+        // sidebar collapse widths (dynamic :class binding)
+        'lg:w-16', 'lg:w-64',
+        // custom animation/interaction utilities
+        'row-hover', 'bar-enter', 'page-enter', 'num-pop',
     ],
 
     theme: {

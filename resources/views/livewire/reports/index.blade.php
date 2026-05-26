@@ -80,9 +80,9 @@
     </flux:card>
 
     {{-- Category breakdown --}}
-    <flux:card>
+    <flux:card class="mb-6">
         <div class="flex items-center justify-between mb-4">
-            <flux:heading size="sm">Spending by category — this month</flux:heading>
+            <flux:heading size="sm">Spending by category — {{ $cycleLabel }} cycle</flux:heading>
             <flux:text size="sm" class="text-slate-400">
                 Total: KSh {{ number_format($categoryTotal, 2) }}
             </flux:text>
@@ -127,6 +127,78 @@
                         </div>
                     </div>
                 @endforeach
+            </div>
+        @endif
+    </flux:card>
+
+    {{-- Income Allocation donut chart --}}
+    <flux:card>
+        <div class="flex items-center justify-between mb-2">
+            <flux:heading size="sm">Income Allocation — {{ $cycleLabel }}</flux:heading>
+        </div>
+        <flux:text size="sm" class="text-slate-400 mb-6">Where your planned income goes this cycle ({{ $windowLabel }})</flux:text>
+
+        @if($plannedIncome <= 0 || empty($pieSlices))
+            <div class="py-12 text-center">
+                <div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                    <i class="ti ti-chart-donut text-xl text-slate-400"></i>
+                </div>
+                <flux:text size="sm" class="text-slate-400">
+                    Set your salary and add expenses to see your income allocation.
+                </flux:text>
+            </div>
+        @else
+            <div class="flex flex-col sm:flex-row items-center gap-8">
+
+                {{-- Donut SVG --}}
+                <div class="relative shrink-0" style="width:160px; height:160px;">
+                    <svg viewBox="0 0 42 42" width="160" height="160" class="rotate-[-90deg]">
+                        @php
+                            $cumOffset = 0;
+                        @endphp
+                        @foreach($pieSlices as $slice)
+                            @php
+                                $dashArray  = $slice['pct'] . ' ' . (100 - $slice['pct']);
+                                $dashOffset = 100 - $cumOffset;
+                                $cumOffset += $slice['pct'];
+                            @endphp
+                            <circle
+                                cx="21" cy="21" r="15.9155"
+                                fill="transparent"
+                                stroke="{{ $slice['color'] }}"
+                                stroke-width="6"
+                                stroke-dasharray="{{ $dashArray }}"
+                                stroke-dashoffset="{{ $dashOffset }}"
+                            />
+                        @endforeach
+                    </svg>
+                    {{-- Center label --}}
+                    <div class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                        <div class="text-xs font-bold text-slate-900 dark:text-white leading-tight">
+                            {{ number_format($plannedIncome, 0) }}
+                        </div>
+                        <div class="text-[10px] text-slate-400 leading-tight">Planned</div>
+                    </div>
+                </div>
+
+                {{-- Legend --}}
+                <div class="flex-1 w-full space-y-2.5">
+                    @foreach($pieSlices as $slice)
+                        <div class="flex items-center gap-3">
+                            <span class="w-3 h-3 rounded-full shrink-0" style="background:{{ $slice['color'] }};"></span>
+                            <span class="flex-1 text-sm text-slate-700 dark:text-slate-300 truncate">
+                                {{ $slice['name'] }}
+                            </span>
+                            <span class="text-sm font-semibold text-slate-900 dark:text-white whitespace-nowrap">
+                                KSh {{ number_format($slice['amount'], 0) }}
+                            </span>
+                            <span class="text-xs text-slate-400 w-10 text-right whitespace-nowrap">
+                                {{ $slice['pct'] }}%
+                            </span>
+                        </div>
+                    @endforeach
+                </div>
+
             </div>
         @endif
     </flux:card>

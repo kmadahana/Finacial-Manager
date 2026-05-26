@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'otp', 'otp_expires_at', 'two_factor_secret', 'email_verified_at'])]
+#[Fillable(['name', 'email', 'password', 'avatar', 'salary', 'pay_cycle_day', 'opening_balance', 'opening_balance_at', 'onboarded_at', 'otp', 'otp_expires_at', 'two_factor_secret', 'email_verified_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -23,6 +23,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'otp_expires_at'    => 'datetime',
             'password'          => 'hashed',
+            'pay_cycle_day'     => 'integer',
+            'opening_balance'   => 'decimal:2',
+            'opening_balance_at'=> 'date',
+            'onboarded_at'      => 'datetime',
         ];
     }
 
@@ -44,5 +48,10 @@ class User extends Authenticatable
     public function budgets(): HasMany
     {
         return $this->hasMany(Budget::class);
+    }
+
+    public function cycleSummaries(): HasMany
+    {
+        return $this->hasMany(CycleSummary::class);
     }
 }

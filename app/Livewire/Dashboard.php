@@ -4,46 +4,34 @@ namespace App\Livewire;
 
 use Livewire\Component;
 use App\Models\Transaction;
+use App\Support\MonthlyFinance;
+use App\Support\CycleLedger;
+use Illuminate\Support\Carbon;
 
 class Dashboard extends Component
 {
     public function render()
     {
-        $userId = auth()->id();
-        $now    = now();
+        $user   = auth()->user();
+        $userId = $user->id;
 
-        // This month totals
-        $thisMonth = Transaction::where('user_id', $userId)
-            ->whereYear('transaction_date', $now->year)
-            ->whereMonth('transaction_date', $now->month)
-            ->selectRaw("
-                SUM(CASE WHEN type='income'  THEN amount ELSE 0 END) as income,
-                SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as expense
-            ")->first();
+        // Active pay-cycle planning month (e.g. on/after the 25th this is next month)
+        [$py, $pm] = MonthlyFinance::currentPlanningMonth($user);
+        $fin = MonthlyFinance::for($user, $py, $pm);
 
-        // Last month totals (for % comparison)
-        $lastMonth = Transaction::where('user_id', $userId)
-            ->whereYear('transaction_date', $now->copy()->subMonth()->year)
-            ->whereMonth('transaction_date', $now->copy()->subMonth()->month)
-            ->selectRaw("
-                SUM(CASE WHEN type='income'  THEN amount ELSE 0 END) as income,
-                SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as expense
-            ")->first();
+        // Previous planning month — for the % comparison badges
+        $prevAnchor = Carbon::create($py, $pm, 1)->subMonth();
+        $prevFin    = MonthlyFinance::for($user, $prevAnchor->year, $prevAnchor->month);
 
-        // All-time balance
-        $allTime = Transaction::where('user_id', $userId)
-            ->selectRaw("
-                SUM(CASE WHEN type='income'  THEN amount ELSE 0 END) as income,
-                SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as expense
-            ")->first();
+        $income        = $fin->incomeEntries;
+        $expense       = $fin->expenses;
+        $plannedIncome = $fin->plannedIncome;
 
-        $income     = (float) ($thisMonth->income      ?? 0);
-        $expense    = (float) ($thisMonth->expense     ?? 0);
-        $lastInc    = (float) ($lastMonth->income      ?? 0);
-        $lastExp    = (float) ($lastMonth->expense     ?? 0);
-        $totalBal   = (float) (($allTime->income ?? 0) - ($allTime->expense ?? 0));
+        // Carry-forward: balance accumulates across cycles instead of resetting.
+        $carriedIn = CycleLedger::openingBalanceFor($user, $py, $pm);
+        $available = $carriedIn + $fin->totalBalance; // carried over + this cycle's net
 
-        // Recent transactions
+        // Recent transactions (not cycle-scoped — just the latest activity)
         $recent = Transaction::where('user_id', $userId)
             ->with('category')
             ->orderByDesc('transaction_date')
@@ -51,11 +39,11 @@ class Dashboard extends Component
             ->limit(5)
             ->get();
 
-        // Category breakdown — this month
+        // Category breakdown — current pay-cycle window
         $categoryRows = Transaction::where('user_id', $userId)
             ->where('type', 'expense')
-            ->whereYear('transaction_date', $now->year)
-            ->whereMonth('transaction_date', $now->month)
+            ->where('transaction_date', '>=', $fin->windowStart)
+            ->where('transaction_date', '<', $fin->windowEnd)
             ->with('category')
             ->get()
             ->groupBy('category_id')
@@ -71,20 +59,27 @@ class Dashboard extends Component
         $catSum = (float) $categoryRows->sum('total');
 
         return view('livewire.dashboard', [
-            'totalBalance'  => $totalBal,
-            'monthIncome'   => $income,
-            'monthExpense'  => $expense,
-            'incomeChange'  => $this->pctChange($lastInc, $income),
-            'expenseChange' => $this->pctChange($lastExp, $expense),
-            'recent'        => $recent,
-            'categoryRows'  => $categoryRows,
-            'categoryTotal' => $catSum,
+            'totalBalance'   => $available,
+            'carriedIn'      => $carriedIn,
+            'monthIncome'    => $income,
+            'plannedIncome'  => $plannedIncome,
+            'monthExpense'   => $expense,
+            'projectedSaving'=> $fin->projectedSaving,
+            'budgetSet'      => $fin->budgetSet,
+            'onTrack'        => $fin->onTrack,
+            'planningLabel'  => Carbon::create($py, $pm, 1)->format('F Y'),
+            'windowLabel'    => $fin->windowLabel(),
+            'incomeChange'   => $this->pctChange($prevFin->incomeEntries, $income),
+            'expenseChange'  => $this->pctChange($prevFin->expenses, $expense),
+            'recent'         => $recent,
+            'categoryRows'   => $categoryRows,
+            'categoryTotal'  => $catSum,
         ])->layout('components.layouts.app');
     }
 
     private function pctChange(float $prev, float $curr): ?float
     {
-        if ($prev <= 0) return $curr > 0 ? null : 0; // no baseline → suppress
+        if ($prev <= 0) return $curr > 0 ? null : 0;
         return round((($curr - $prev) / $prev) * 100, 1);
     }
 }
