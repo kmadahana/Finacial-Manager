@@ -5,6 +5,7 @@ namespace App\Livewire\Auth;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 
+#[\Livewire\Attributes\Title('Sign in')]
 class Login extends Component
 {
     public string $email = '';

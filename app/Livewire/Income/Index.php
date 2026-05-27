@@ -8,6 +8,7 @@ use App\Support\MonthlyFinance;
 use Carbon\Carbon;
 use Livewire\Component;
 
+#[\Livewire\Attributes\Title('Income')]
 class Index extends Component
 {
     public float $salary = 0;

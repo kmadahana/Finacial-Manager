@@ -9,6 +9,7 @@ use App\Models\Budget;
 use App\Support\MonthlyFinance;
 use Illuminate\Support\Carbon;
 
+#[\Livewire\Attributes\Title('Budget')]
 class Index extends Component
 {
     public int $year;

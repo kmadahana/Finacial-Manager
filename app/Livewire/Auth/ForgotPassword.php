@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OtpMail;
 
+#[\Livewire\Attributes\Title('Reset password')]
 class ForgotPassword extends Component
 {
     public int $step = 1;

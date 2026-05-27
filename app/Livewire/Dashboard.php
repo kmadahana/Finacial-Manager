@@ -8,6 +8,7 @@ use App\Support\MonthlyFinance;
 use App\Support\CycleLedger;
 use Illuminate\Support\Carbon;
 
+#[\Livewire\Attributes\Title('Dashboard')]
 class Dashboard extends Component
 {
     public function render()

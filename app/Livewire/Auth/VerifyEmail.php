@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OtpMail;
 
+#[\Livewire\Attributes\Title('Verify email')]
 class VerifyEmail extends Component
 {
     public string $otp = '';

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finance Manager — How It Works</title>
+<style>
+  :root { --ink:#1e293b; --muted:#64748b; --line:#e2e8f0; --red:#dc2626; --green:#16a34a; --bg:#f8fafc; --code:#f1f5f9; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink); line-height: 1.55; margin: 0; background: #fff;
+    font-size: 12.5px;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 32px 40px 64px; }
+  h1 { font-size: 30px; margin: 0 0 4px; letter-spacing:-0.5px; }
+  h2 { font-size: 20px; margin: 38px 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--red); }
+  h3 { font-size: 15px; margin: 22px 0 6px; color:#0f172a; }
+  h4 { font-size: 13px; margin: 16px 0 4px; color:#334155; }
+  p, li { color: #334155; }
+  code { font-family: "SF Mono", "Consolas", "Roboto Mono", monospace; background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: 0.86em; color:#0f172a; }
+  pre { background: var(--code); border: 1px solid var(--line); border-left: 3px solid var(--red); border-radius: 6px; padding: 12px 14px; overflow:auto; font-size: 11px; line-height:1.45; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 11.5px; }
+  th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  .lead { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .tag { display:inline-block; background:#fee2e2; color:#991b1b; border-radius:999px; padding:1px 10px; font-size:11px; font-weight:600; }
+  .note { background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:10px 14px; margin:12px 0; }
+  .warn { background:#fef3c7; border:1px solid #fde68a; border-radius:6px; padding:10px 14px; margin:12px 0; }
+  .ok { color: var(--green); font-weight:600; }
+  .bad { color: var(--red); font-weight:600; }
+  ul.toc { list-style:none; padding-left:0; columns:2; font-size:12.5px; }
+  ul.toc li { margin: 3px 0; }
+  .cover { text-align:center; padding: 90px 0 40px; border-bottom:1px solid var(--line); margin-bottom: 10px; }
+  .cover .sub { color:var(--muted); font-size:15px; }
+  .pill { font-size:11px; color:var(--muted); }
+  .printbar { position: sticky; top:0; background:#0f172a; color:#fff; padding:8px 14px; font-size:12px; text-align:center; }
+  .printbar b { color:#fca5a5; }
+  footer { margin-top: 40px; padding-top: 12px; border-top:1px solid var(--line); color:var(--muted); font-size:11px; }
+  @media print {
+    .printbar { display:none; }
+    .wrap { padding: 0 12mm; max-width:none; }
+    h2 { page-break-before: always; }
+    h2#s1 { page-break-before: avoid; }
+    pre, table, .note, .warn { page-break-inside: avoid; }
+    .cover { page-break-after: always; }
+  }
+</style>
+</head>
+<body>
+<div class="printbar">To save as PDF: press <b>Ctrl / Cmd + P</b> → Destination <b>Save as PDF</b> → Save. (This bar won't appear in the PDF.)</div>
+<div class="wrap">
+
+<div class="cover">
+  <span class="tag">PROJECT GUIDE</span>
+  <h1>Finance&nbsp;Manager</h1>
+  <div class="sub">How it was built, how it works, and how to run it</div>
+  <p class="pill">Laravel 13 &middot; Livewire 4 &middot; Flux Pro 2 &middot; Tailwind 3 &middot; SQLite &middot; Vite 8</p>
+</div>
+
+<h2 id="s1">Table of contents</h2>
+<ul class="toc">
+  <li>1. The big picture (the stack)</li>
+  <li>2. How the project was created</li>
+  <li>3. The dependency files explained</li>
+  <li>4. The database: migrations, models, seeders</li>
+  <li>5. How a request flows (lifecycle)</li>
+  <li>6. The domain logic (pay cycle &amp; carry-forward)</li>
+  <li>7. Running it: <code>serve</code> vs <code>composer dev</code></li>
+  <li>8. Project flow &amp; folder map</li>
+  <li>9. Cheat-sheet of commands</li>
+</ul>
+
+<!-- =============================================== -->
+<h2>1. The big picture — the stack</h2>
+<p>Finance Manager is a <strong>server-driven single-page-feeling</strong> web app. There is no separate
+JavaScript front-end framework; instead the UI is built from <strong>Livewire components</strong> (PHP classes
+that render Blade HTML and talk to the server over AJAX), styled with <strong>Flux</strong> (a Livewire UI kit)
+and <strong>Tailwind CSS</strong>. Data lives in a single-file <strong>SQLite</strong> database accessed through
+Laravel's <strong>Eloquent ORM</strong>.</p>
+
+<table>
+  <tr><th>Layer</th><th>Technology</th><th>Job in this project</th></tr>
+  <tr><td>Language / runtime</td><td>PHP 8.3+</td><td>Runs everything server-side.</td></tr>
+  <tr><td>Framework</td><td>Laravel 13.8</td><td>Routing, ORM, Blade templating, container, migrations.</td></tr>
+  <tr><td>UI components</td><td>Livewire 4.3</td><td>Stateful PHP components — the pages (Dashboard, Budget, etc.).</td></tr>
+  <tr><td>Design system</td><td>Flux Pro 2.14</td><td><code>&lt;flux:card&gt;</code>, <code>&lt;flux:button&gt;</code>, modals, inputs.</td></tr>
+  <tr><td>Client sprinkles</td><td>Alpine.js</td><td>Small in-browser interactivity (sidebar, dark mode). Bundled by Livewire.</td></tr>
+  <tr><td>CSS</td><td>Tailwind 3</td><td>Utility classes; compiled by Vite.</td></tr>
+  <tr><td>Asset bundler</td><td>Vite 8</td><td>Compiles <code>resources/css</code> + <code>resources/js</code> into <code>public/build</code>.</td></tr>
+  <tr><td>Database</td><td>SQLite</td><td>One file: <code>database/database.sqlite</code>.</td></tr>
+</table>
+
+<div class="note"><strong>Mental model:</strong> a click in the browser sends a tiny AJAX request to a Livewire
+component on the server. The component updates its PHP properties, re-renders its Blade view, and sends back
+just the HTML diff, which Livewire patches into the page. It <em>feels</em> like a SPA but the logic is all PHP.</div>
+
+<!-- =============================================== -->
+<h2>2. How the project was created (step by step)</h2>
+<p>This is the path from empty folder to the app you have. Your <code>composer.json</code> still carries the
+tell-tale scripts (<code>post-create-project-cmd</code>, <code>setup</code>) from these steps.</p>
+
+<h3>Step 1 — scaffold a Laravel app</h3>
+<pre><code>composer create-project laravel/laravel finance-manager</code></pre>
+<p>This downloads the Laravel skeleton and runs <code>post-create-project-cmd</code>, which:
+generates the app key, <em>creates the empty SQLite file</em> (<code>touch database/database.sqlite</code>),
+and runs the first migrations. That is why the DB is SQLite by default.</p>
+
+<h3>Step 2 — choose SQLite</h3>
+<p>In <code>.env</code>: <code>DB_CONNECTION=sqlite</code>. No host/user/password needed — Laravel just reads/writes
+the one file. Great for development and small single-user apps.</p>
+
+<h3>Step 3 — add Livewire &amp; Flux</h3>
+<pre><code>composer require livewire/livewire
+composer require livewire/flux-pro   # private repo: composer.fluxui.dev</code></pre>
+<p>Flux Pro is a paid package, so <code>composer.json</code> declares a custom <code>repositories</code> entry
+pointing at <code>https://composer.fluxui.dev</code>.</p>
+
+<h3>Step 4 — front-end toolchain (Vite + Tailwind)</h3>
+<pre><code>npm install            # installs vite, tailwind, alpine, axios, concurrently
+npm run build          # compiles assets into public/build</code></pre>
+
+<h3>Step 5 — build the domain</h3>
+<p>For each feature: write a <strong>migration</strong> (table), an <strong>Eloquent model</strong>, a
+<strong>Livewire component</strong> (<code>app/Livewire/...</code>) and its <strong>Blade view</strong>
+(<code>resources/views/livewire/...</code>), then register a <strong>route</strong> in
+<code>routes/web.php</code>. Authentication (login, register, OTP, password reset) was built as Livewire
+components rather than a pre-made starter kit.</p>
+
+<h3>Step 6 — run it</h3>
+<pre><code>php artisan migrate     # create the tables
+php artisan serve       # start the dev server  ->  http://127.0.0.1:8000</code></pre>
+
+<div class="note"><strong>One-command recreate:</strong> your <code>composer.json</code> defines a
+<code>setup</code> script that chains it all: <code>composer install</code> → copy <code>.env</code> →
+<code>key:generate</code> → <code>migrate --force</code> → <code>npm install</code> → <code>npm run build</code>.
+Run it with <code>composer run setup</code>.</p>
+
+<!-- =============================================== -->
+<h2>3. The dependency files explained</h2>
+
+<h3>3.1 <code>composer.json</code> — the PHP dependencies &amp; scripts</h3>
+<p>Composer is PHP's package manager (like npm for PHP). <code>composer.json</code> lists what the app needs;
+<code>composer.lock</code> pins exact versions; <code>vendor/</code> holds the downloaded code and the
+<strong>autoloader</strong> (so you never manually <code>require</code> a class).</p>
+<table>
+  <tr><th>require (production)</th><th>Why</th></tr>
+  <tr><td><code>php ^8.3</code></td><td>Minimum language version.</td></tr>
+  <tr><td><code>laravel/framework ^13.8</code></td><td>The framework itself.</td></tr>
+  <tr><td><code>laravel/tinker ^3</code></td><td>Interactive REPL (<code>php artisan tinker</code>) — used to verify logic.</td></tr>
+  <tr><td><code>livewire/livewire 4.3.0</code></td><td>The reactive component engine.</td></tr>
+  <tr><td><code>livewire/flux-pro ^2.14</code></td><td>The UI component library.</td></tr>
+</table>
+<table>
+  <tr><th>require-dev (only on your machine)</th><th>Why</th></tr>
+  <tr><td><code>fakerphp/faker</code></td><td>Generates fake data for factories/seeders.</td></tr>
+  <tr><td><code>laravel/pail</code></td><td>Live log tailer (<code>php artisan pail</code>).</td></tr>
+  <tr><td><code>laravel/pint</code></td><td>Opinionated code-style fixer.</td></tr>
+  <tr><td><code>nunomaduro/collision</code></td><td>Pretty error output in the console / tests.</td></tr>
+  <tr><td><code>phpunit/phpunit</code>, <code>mockery</code></td><td>Test runner + mocking.</td></tr>
+</table>
+<p>The <code>scripts</code> block defines shortcuts: <code>setup</code>, <code>dev</code> (see §7), and
+<code>test</code>. <code>post-autoload-dump</code> auto-runs <code>package:discover</code> so Laravel finds
+installed packages.</p>
+
+<h3>3.2 <code>package.json</code> — the JavaScript/asset dependencies</h3>
+<p>npm's manifest. Here everything is <em>dev</em> tooling because the browser ultimately receives only the
+<strong>compiled</strong> output, not these packages directly.</p>
+<table>
+  <tr><th>Package</th><th>Why</th></tr>
+  <tr><td><code>vite</code> + <code>laravel-vite-plugin</code></td><td>Bundles &amp; serves CSS/JS; injects them via the <code>@vite</code> Blade directive.</td></tr>
+  <tr><td><code>tailwindcss</code> + <code>@tailwindcss/vite</code> + <code>@tailwindcss/forms</code></td><td>Utility-first CSS, compiled at build time.</td></tr>
+  <tr><td><code>alpinejs</code></td><td>Listed, but Livewire already bundles Alpine — we do <em>not</em> start a second copy (that once broke clicks).</td></tr>
+  <tr><td><code>axios</code></td><td>HTTP helper exposed on <code>window</code> in <code>bootstrap.js</code>.</td></tr>
+  <tr><td><code>concurrently</code></td><td>Runs several dev processes at once (used by <code>composer run dev</code>).</td></tr>
+</table>
+
+<h3>3.3 The <code>bootstrap/</code> folder — <em>not</em> the CSS framework!</h3>
+<p>In Laravel, "bootstrap" means <em>starting the framework up</em>, nothing to do with Bootstrap CSS.</p>
+<ul>
+  <li><strong><code>bootstrap/app.php</code></strong> — the modern Laravel entry configuration. It wires routing
+  (<code>routes/web.php</code>, <code>routes/console.php</code>), middleware, exceptions and a
+  <code>/up</code> health-check, then returns the <code>Application</code> instance.</li>
+  <li><strong><code>bootstrap/providers.php</code></strong> — the list of service providers to load (here just
+  <code>AppServiceProvider</code>).</li>
+  <li><strong><code>bootstrap/cache/</code></strong> — compiled config/route caches for speed.</li>
+</ul>
+<pre><code>return Application::configure(basePath: dirname(__DIR__))
+    -&gt;withRouting(web: __DIR__.'/../routes/web.php', commands: ..., health: '/up')
+    -&gt;withMiddleware(fn ($m) =&gt; ...)
+    -&gt;withExceptions(fn ($e) =&gt; ...)
+    -&gt;create();</code></pre>
+
+<h3>3.4 The other JSON / config files</h3>
+<table>
+  <tr><th>File</th><th>Role</th></tr>
+  <tr><td><code>composer.lock</code> / <code>package-lock.json</code></td><td>Exact pinned versions so every machine installs identically.</td></tr>
+  <tr><td><code>vite.config.js</code></td><td>Tells Vite which entry files to build (<code>app.css</code>, <code>app.js</code>).</td></tr>
+  <tr><td><code>tailwind.config.js</code></td><td>Tailwind theme + which files to scan for classes.</td></tr>
+  <tr><td><code>public/build/manifest.json</code></td><td>Map of source file → hashed compiled file, read by <code>@vite</code> in production mode.</td></tr>
+  <tr><td><code>.env</code></td><td>Environment secrets/settings (DB, app key, URLs). Never committed.</td></tr>
+</table>
+
+<!-- =============================================== -->
+<h2>4. The database: migrations, models &amp; seeders</h2>
+
+<h3>4.1 Migrations — version control for your schema</h3>
+<p>A migration is a PHP class describing a schema change (<code>up()</code> to apply, <code>down()</code> to
+reverse). Running <code>php artisan migrate</code> executes the pending ones in filename/date order and records
+them so they never run twice. This means anyone can rebuild the exact same database from scratch.</p>
+<table>
+  <tr><th>Migration</th><th>What it creates / changes</th></tr>
+  <tr><td>create_users_table</td><td>Accounts (name, email, password…).</td></tr>
+  <tr><td>create_cache_table / jobs_table</td><td>Framework support tables (cache, queues).</td></tr>
+  <tr><td>add_otp_columns_to_users</td><td>One-time-password login fields.</td></tr>
+  <tr><td>create_categories_table</td><td>Income/expense categories (name, type, colour, icon).</td></tr>
+  <tr><td>create_transactions_table</td><td>Every income/expense row (amount, type, date, category).</td></tr>
+  <tr><td>create_goals_table</td><td>Savings goals (target, current, deadline).</td></tr>
+  <tr><td>create_budgets_table</td><td>Planned amount per category, per year+month.</td></tr>
+  <tr><td>add_avatar / add_salary</td><td>Profile photo path; monthly salary constant.</td></tr>
+  <tr><td>add_pay_cycle_day_to_users</td><td>Pay-cycle cutoff day (default 25).</td></tr>
+  <tr><td>add_opening_balance_to_users</td><td>Carry-forward anchor (starting balance + date).</td></tr>
+  <tr><td>create_cycle_summaries_table</td><td>Stored carry-forward ledger (opening/closing per cycle).</td></tr>
+  <tr><td>add_onboarded_at_to_users</td><td>Flag for the first-login welcome wizard.</td></tr>
+</table>
+
+<h3>4.2 Models — one class per table</h3>
+<p>Each Eloquent model maps to a table and defines relationships, so you write
+<code>$user-&gt;transactions</code> instead of SQL joins.</p>
+<table>
+  <tr><th>Model</th><th>Table</th><th>Key relationships</th></tr>
+  <tr><td>User</td><td>users</td><td>hasMany transactions, categories, goals, budgets, cycleSummaries</td></tr>
+  <tr><td>Category</td><td>categories</td><td>belongsTo user; hasMany transactions</td></tr>
+  <tr><td>Transaction</td><td>transactions</td><td>belongsTo user, category</td></tr>
+  <tr><td>Budget</td><td>budgets</td><td>belongsTo user, category (planned per year+month)</td></tr>
+  <tr><td>Goal</td><td>goals</td><td>belongsTo user</td></tr>
+  <tr><td>CycleSummary</td><td>cycle_summaries</td><td>belongsTo user (one row per finalized pay cycle)</td></tr>
+</table>
+
+<h3>4.3 Seeders &amp; seeding</h3>
+<p>A <strong>seeder</strong> fills the DB with starter data. <code>DatabaseSeeder</code> creates a test user via
+a <strong>factory</strong> (a class that fabricates fake model data). Run with <code>php artisan db:seed</code>
+(or <code>migrate --seed</code>).</p>
+<p>This app also does <strong>lazy seeding</strong>: when a user first opens a relevant page,
+<code>Category::seedDefaultsFor($user)</code> gives them 13 ready-made categories (Salary, Food, Transport…),
+but only if they have none yet:</p>
+<pre><code>public static function seedDefaultsFor(User $user): void {
+    if ($user-&gt;categories()-&gt;exists()) return;     // already seeded
+    foreach (self::defaults() as $cat) $user-&gt;categories()-&gt;create($cat);
+}</code></pre>
+
+<!-- =============================================== -->
+<h2>5. How a request flows (the lifecycle)</h2>
+<p>This is <em>why</em> it works — the chain that turns a URL into a page.</p>
+<ol>
+  <li><strong>Browser → <code>public/index.php</code></strong>. Every request hits this single front controller.</li>
+  <li><strong><code>bootstrap/app.php</code></strong> boots the framework and builds the service container.</li>
+  <li><strong>Middleware</strong> runs (sessions, CSRF, and <code>auth</code> for protected routes).</li>
+  <li><strong><code>routes/web.php</code></strong> matches the URL to a Livewire component, e.g.
+      <code>Route::get('dashboard', Dashboard::class)</code>.</li>
+  <li><strong>The Livewire component's <code>render()</code></strong> runs: it queries Eloquent
+      (often via the <code>MonthlyFinance</code>/<code>CycleLedger</code> services) and returns a Blade view.</li>
+  <li><strong>Blade compiles to HTML</strong>, wrapped in the layout (<code>components.layouts.app</code> →
+      the <code>dashboard</code> shell with sidebar).</li>
+  <li><strong><code>@vite</code></strong> injects the compiled CSS/JS; <strong><code>@livewireScripts</code></strong>
+      and <strong><code>@fluxScripts</code></strong> add the JS that makes the page interactive.</li>
+  <li><strong>Interactivity:</strong> a <code>wire:click="prevMonth"</code> sends an AJAX call back to the same
+      component; it mutates a property, re-renders, and Livewire patches only the changed HTML into the page.
+      Alpine handles purely-client things (sidebar open/close, dark mode) with no server round-trip.</li>
+</ol>
+<div class="note"><strong>Why no page reloads?</strong> Livewire keeps a snapshot of the component's state in the
+page and exchanges small JSON/HTML diffs with the server on each interaction — the server stays the source of
+truth, the DOM is patched in place.</div>
+
+<!-- =============================================== -->
+<h2>6. The domain logic (what makes it a finance app)</h2>
+<p>Two custom services in <code>app/Support/</code> hold the money rules so the Dashboard, Budget and Reports
+pages all agree:</p>
+<ul>
+  <li><strong><code>MonthlyFinance</code></strong> — given a user + planning month, it computes the
+      <em>pay-cycle window</em> (money is planned on a 25th→24th style cycle, not the calendar month),
+      planned income (salary + entries), expenses, budget, savings and pace. Salary is only counted from the
+      user's registration cycle onward.</li>
+  <li><strong><code>CycleLedger</code></strong> — implements <em>carry-forward</em>: each completed cycle's
+      leftover (<code>opening + income − expenses</code>) rolls into the next via the
+      <code>cycle_summaries</code> table, so the dashboard "Total Balance" is a running balance, not a monthly reset.</li>
+</ul>
+<p>A new user sees a 3-step <strong>onboarding wizard</strong> (welcome → set pay-cycle day → success) the first
+time they log in, gated by the <code>onboarded_at</code> column.</p>
+
+<!-- =============================================== -->
+<h2>7. Running it: <code>php artisan serve</code> vs <code>composer run dev</code></h2>
+
+<h3>What each one actually does</h3>
+<p><strong><code>php artisan serve</code></strong> starts <em>one</em> thing: PHP's built-in web server wrapping
+<code>public/index.php</code> at <code>http://127.0.0.1:8000</code>. That's it — it serves the PHP app.</p>
+<p><strong><code>composer run dev</code></strong> runs the script from <code>composer.json</code>, which uses
+<code>concurrently</code> to launch <em>four</em> processes together:</p>
+<pre><code>npx concurrently
+   "php artisan serve"                       # 1. web server
+   "php artisan queue:listen --tries=1"      # 2. background job worker
+   "php artisan pail"                        # 3. live log viewer
+   "npm run dev"                             # 4. Vite dev server (hot reload)
+   --names=server,queue,logs,vite --kill-others</code></pre>
+
+<h3>Why <code>php artisan serve</code> alone works for you</h3>
+<p>Because you already ran <code>npm run build</code>, the compiled CSS/JS sit in <code>public/build</code>.
+The <code>@vite</code> directive checks for a <code>public/hot</code> file (written only while the Vite dev
+server runs). No hot file → it loads the <strong>pre-built</strong> assets from the manifest. So the app is
+fully styled and interactive without Vite running. You'd only <em>need</em> Vite (i.e. <code>composer run dev</code>
+or a separate <code>npm run dev</code>) when you're <em>editing</em> CSS/JS and want changes without rebuilding.</p>
+
+<table>
+  <tr><th></th><th><code>php artisan serve</code></th><th><code>composer run dev</code></th></tr>
+  <tr><td>Processes</td><td>1 (web server)</td><td>4 (server + queue + logs + Vite)</td></tr>
+  <tr><td>Front-end changes</td><td>Need <code>npm run build</code> to see them</td><td><span class="ok">Hot reload</span> — instant</td></tr>
+  <tr><td>Background jobs (queue)</td><td>Not running</td><td>Running</td></tr>
+  <tr><td>Live logs</td><td>No</td><td>Yes (pail)</td></tr>
+  <tr><td>Resource use</td><td><span class="ok">Light</span></td><td>Heavier (needs Node + npm deps)</td></tr>
+  <tr><td>Best when</td><td>Back-end work, or using built assets</td><td>Active full-stack development</td></tr>
+</table>
+
+<h4>Advantages / disadvantages</h4>
+<p><strong><code>php artisan serve</code></strong> &nbsp;<span class="ok">+</span> simplest, one terminal, low
+resources, perfect with pre-built assets. &nbsp;<span class="bad">−</span> no hot reload, no queue worker, no
+live logs; you must rebuild after CSS/JS edits.</p>
+<p><strong><code>composer run dev</code></strong> &nbsp;<span class="ok">+</span> full dev experience in one
+command (HMR, queues, logs). &nbsp;<span class="bad">−</span> heavier, noisier, requires Node + the npm
+packages installed; overkill if you're only touching PHP.</p>
+
+<div class="warn"><strong>Neither is for production.</strong> In production you don't use a dev server at all —
+you serve via <strong>nginx/Apache + PHP-FPM</strong>, run <code>npm run build</code> once, and run the queue
+worker as a managed process (e.g. supervisor). <code>artisan serve</code> and <code>composer dev</code> are
+development conveniences only.</div>
+
+<!-- =============================================== -->
+<h2>8. Project flow &amp; folder map</h2>
+<pre><code>finance-manager/
+├─ app/
+│  ├─ Livewire/        # page components: Dashboard, Transactions, Reports, Onboarding...
+│  ├─ Models/          # Eloquent: User, Category, Transaction, Budget, Goal, CycleSummary
+│  └─ Support/         # domain services: MonthlyFinance, CycleLedger, Money
+├─ bootstrap/          # framework start-up (app.php, providers.php)
+├─ database/
+│  ├─ migrations/      # schema history
+│  ├─ seeders/         # starter data
+│  └─ database.sqlite  # the actual DB file
+├─ public/
+│  ├─ index.php        # the single entry point
+│  └─ build/           # compiled CSS/JS (+ manifest.json)
+├─ resources/
+│  ├─ views/livewire/  # Blade templates for each component
+│  ├─ views/components/layouts/  # app shell + dashboard shell
+│  ├─ css/app.css  js/app.js     # Vite entry files
+├─ routes/web.php      # URL → Livewire component map
+├─ composer.json       # PHP deps + scripts        package.json  # JS deps
+└─ .env                # environment config</code></pre>
+
+<h4>End-to-end flow in one line</h4>
+<p><code>URL → public/index.php → bootstrap → middleware (auth) → route → Livewire component → MonthlyFinance/
+CycleLedger → Eloquent → SQLite → Blade view → layout → @vite/@livewireScripts → browser → wire:click →
+(repeat the AJAX round-trip)</code></p>
+
+<!-- =============================================== -->
+<h2>9. Cheat-sheet of commands</h2>
+<table>
+  <tr><th>Command</th><th>Does</th></tr>
+  <tr><td><code>composer run setup</code></td><td>Full first-time setup (install, key, migrate, build).</td></tr>
+  <tr><td><code>php artisan serve</code></td><td>Start the dev web server.</td></tr>
+  <tr><td><code>composer run dev</code></td><td>Server + queue + logs + Vite hot reload.</td></tr>
+  <tr><td><code>php artisan migrate</code></td><td>Apply pending schema changes.</td></tr>
+  <tr><td><code>php artisan migrate:fresh --seed</code></td><td>Drop all, rebuild, seed. <span class="bad">(wipes data)</span></td></tr>
+  <tr><td><code>php artisan db:seed</code></td><td>Run seeders.</td></tr>
+  <tr><td><code>npm run build</code></td><td>Compile front-end assets for <code>artisan serve</code>/production.</td></tr>
+  <tr><td><code>npm run dev</code></td><td>Vite hot-reload server (front-end editing).</td></tr>
+  <tr><td><code>php artisan tinker</code></td><td>Interactive PHP REPL against the app.</td></tr>
+  <tr><td><code>php artisan view:clear</code></td><td>Clear compiled Blade cache.</td></tr>
+</table>
+
+<footer>
+  Finance Manager — generated project guide. Stack: Laravel 13.8 · Livewire 4.3 · Flux Pro 2.14 · Tailwind 3 ·
+  Vite 8 · SQLite. To export: open in a browser and Print → Save as PDF.
+</footer>
+
+</div>
+</body>
+</html>

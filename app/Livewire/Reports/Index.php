@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use App\Support\MonthlyFinance;
 use Illuminate\Support\Carbon;
 
+#[\Livewire\Attributes\Title('Reports')]
 class Index extends Component
 {
     public string $period = '6m'; // 6m, 12m, ytd

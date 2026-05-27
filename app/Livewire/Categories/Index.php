@@ -5,6 +5,7 @@ namespace App\Livewire\Categories;
 use Livewire\Component;
 use App\Models\Category;
 
+#[\Livewire\Attributes\Title('Categories')]
 class Index extends Component
 {
     public string $name = '';

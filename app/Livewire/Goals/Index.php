@@ -5,6 +5,7 @@ namespace App\Livewire\Goals;
 use Livewire\Component;
 use App\Models\Goal;
 
+#[\Livewire\Attributes\Title('Goals')]
 class Index extends Component
 {
     public string $name = '';

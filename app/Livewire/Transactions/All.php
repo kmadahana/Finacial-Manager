@@ -6,6 +6,7 @@ use App\Models\Transaction;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+#[\Livewire\Attributes\Title('All Transactions')]
 class All extends Component
 {
     use WithPagination;

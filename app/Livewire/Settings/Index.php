@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
+#[\Livewire\Attributes\Title('Settings')]
 class Index extends Component
 {
     use WithFileUploads;
